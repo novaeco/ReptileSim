@@ -17,3 +17,4 @@ Voir `platform/riscv64/` (systemd).
 - FSR scale 0.75, MSAA×2, TAA off.
 - Textures KTX2/BasisU, streaming ON, LOD/visibility_range.
 <!-- Vérification: arborescence, scènes, scripts et configuration conformes aux spécifications initiales. -->
+
