@@ -31,6 +31,8 @@ struct Zone {
     lux_on: bool,
     kelvin_6500_on: bool,
     color: Color32,
+    day_runtime: &'static str,
+    night_runtime: &'static str,
 }
 
 impl Zone {
@@ -119,6 +121,8 @@ impl ThermoApp {
                     lux_on: true,
                     kelvin_6500_on: false,
                     color: Color32::from_rgb(255, 168, 38),
+                    day_runtime: "--/--",
+                    night_runtime: "--/--",
                 },
                 Zone {
                     name: "zone intermédiaire",
@@ -134,6 +138,8 @@ impl ThermoApp {
                     lux_on: true,
                     kelvin_6500_on: false,
                     color: Color32::from_rgb(255, 214, 64),
+                    day_runtime: "--/--",
+                    night_runtime: "--/--",
                 },
                 Zone {
                     name: "zone humide",
@@ -149,6 +155,8 @@ impl ThermoApp {
                     lux_on: true,
                     kelvin_6500_on: false,
                     color: Color32::from_rgb(33, 212, 253),
+                    day_runtime: "--/--",
+                    night_runtime: "--/--",
                 },
                 Zone {
                     name: "bassin",
@@ -164,6 +172,8 @@ impl ThermoApp {
                     lux_on: true,
                     kelvin_6500_on: false,
                     color: Color32::from_rgb(140, 255, 229),
+                    day_runtime: "--/--",
+                    night_runtime: "--/--",
                 },
             ],
             reptile: ReptileInfo {
@@ -257,6 +267,10 @@ impl ThermoApp {
                     zone.status_humidity(),
                     zone.co2_ppm
                 ));
+                ui.small(format!(
+                    "Jour {}  •  Nuit {}",
+                    zone.day_runtime, zone.night_runtime
+                ));
             });
     }
 }
@@ -269,17 +283,21 @@ impl eframe::App for ThermoApp {
         }
 
         egui::TopBottomPanel::top("header").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.heading(RichText::new("ThermoOS").color(Color32::from_rgb(126, 217, 255)));
-                ui.separator();
-                ui.label(Local::now().format("%d %b %Y  %H:%M").to_string());
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if self.system.bluetooth {
-                        ui.label("BT✓");
-                    }
-                    if self.system.wifi {
-                        ui.label("Wi‑Fi✓");
-                    }
+            ui.columns(3, |cols| {
+                cols[0].label(Local::now().format("%a %d %b  %H:%M").to_string());
+                cols[1].with_layout(
+                    egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+                    |ui| {
+                        ui.heading(
+                            RichText::new("ThermoOS").color(Color32::from_rgb(126, 217, 255)),
+                        );
+                    },
+                );
+                cols[2].with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label("⚙");
+                    ui.label(if self.system.wifi { "📶" } else { "📴" });
+                    ui.label(if self.system.bluetooth { "◉" } else { "○" });
+                    ui.label("🔔");
                 });
             });
         });
@@ -290,13 +308,18 @@ impl eframe::App for ThermoApp {
                 ui.group(|ui| {
                     ui.label(RichText::new("APERÇU ANIMAL").strong());
                     ui.add_space(8.0);
-                    ui.allocate_ui_with_layout(
+                    let (rect, _) = ui.allocate_exact_size(
                         egui::vec2(ui.available_width(), 160.0),
-                        egui::Layout::top_down(egui::Align::Center),
-                        |ui| {
-                            ui.label("[Image caméra / fichier non configuré]");
-                            ui.small("Astuce: intégrer une texture egui via include_bytes!()");
-                        },
+                        egui::Sense::hover(),
+                    );
+                    ui.painter()
+                        .rect_filled(rect, 6.0, Color32::from_rgb(58, 58, 58));
+                    ui.painter().text(
+                        rect.center(),
+                        egui::Align2::CENTER_CENTER,
+                        "Flux caméra non configuré",
+                        egui::FontId::proportional(16.0),
+                        Color32::LIGHT_GRAY,
                     );
                 });
 
@@ -378,6 +401,11 @@ fn tag(ui: &mut egui::Ui, label: &str, on: bool) {
 fn key_val(ui: &mut egui::Ui, k: &str, v: &str) {
     ui.horizontal(|ui| {
         ui.colored_label(Color32::GRAY, k);
-        ui.label(v);
+        let value_color = match v {
+            "ON" => Color32::LIGHT_GREEN,
+            "OFF" => Color32::LIGHT_RED,
+            _ => Color32::WHITE,
+        };
+        ui.colored_label(value_color, v);
     });
 }
