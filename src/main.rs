@@ -336,6 +336,19 @@ impl eframe::App for ThermoApp {
                         );
                         ui.small(&self.preview_status);
                     }
+                    let (rect, _) = ui.allocate_exact_size(
+                        egui::vec2(ui.available_width(), 160.0),
+                        egui::Sense::hover(),
+                    );
+                    ui.painter()
+                        .rect_filled(rect, 6.0, Color32::from_rgb(58, 58, 58));
+                    ui.painter().text(
+                        rect.center(),
+                        egui::Align2::CENTER_CENTER,
+                        "Flux caméra non configuré",
+                        egui::FontId::proportional(16.0),
+                        Color32::LIGHT_GRAY,
+                    );
                 });
 
                 ui.add_space(8.0);
