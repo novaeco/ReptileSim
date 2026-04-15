@@ -1,4 +1,4 @@
-use chrono::Local;
+use chrono::{Datelike, Local};
 use eframe::egui::{self, Color32, RichText, Stroke};
 use image::io::Reader as ImageReader;
 use rand::Rng;
@@ -36,6 +36,7 @@ struct Zone {
     color: Color32,
     day_runtime: &'static str,
     night_runtime: &'static str,
+    sensor_online: bool,
 }
 
 impl Zone {
@@ -56,6 +57,22 @@ impl Zone {
             "HUMIDE"
         } else {
             "OK"
+        }
+    }
+
+    fn display_temp(&self) -> String {
+        if self.sensor_online {
+            format!("{:.1}°C", self.temp)
+        } else {
+            "--.-°C".to_owned()
+        }
+    }
+
+    fn display_humidity(&self) -> String {
+        if self.sensor_online {
+            format!("{}%", self.humidity)
+        } else {
+            "---%".to_owned()
         }
     }
 }
@@ -130,6 +147,7 @@ impl ThermoApp {
                     color: Color32::from_rgb(255, 168, 38),
                     day_runtime: "--/--",
                     night_runtime: "--/--",
+                    sensor_online: true,
                 },
                 Zone {
                     name: "zone intermédiaire",
@@ -147,6 +165,7 @@ impl ThermoApp {
                     color: Color32::from_rgb(255, 214, 64),
                     day_runtime: "--/--",
                     night_runtime: "--/--",
+                    sensor_online: true,
                 },
                 Zone {
                     name: "zone humide",
@@ -164,6 +183,7 @@ impl ThermoApp {
                     color: Color32::from_rgb(33, 212, 253),
                     day_runtime: "--/--",
                     night_runtime: "--/--",
+                    sensor_online: true,
                 },
                 Zone {
                     name: "bassin",
@@ -181,6 +201,7 @@ impl ThermoApp {
                     color: Color32::from_rgb(140, 255, 229),
                     day_runtime: "--/--",
                     night_runtime: "--/--",
+                    sensor_online: true,
                 },
             ],
             reptile: ReptileInfo {
@@ -223,6 +244,13 @@ impl ThermoApp {
     fn simulate(&mut self) {
         let mut rng = rand::thread_rng();
         for zone in &mut self.zones {
+            if rng.gen_bool(0.01) {
+                zone.sensor_online = !zone.sensor_online;
+            }
+            if !zone.sensor_online {
+                continue;
+            }
+
             let d_temp: f32 = rng.gen_range(-0.12..=0.12);
             zone.temp =
                 (zone.temp + d_temp).clamp(zone.target_temp.0 - 4.0, zone.target_temp.1 + 4.0);
@@ -267,14 +295,14 @@ impl ThermoApp {
                     ui.colored_label(zone.color, RichText::new(zone.name).strong());
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.label(
-                            RichText::new(format!("{}%", zone.humidity))
+                            RichText::new(zone.display_humidity())
                                 .size(28.0)
                                 .color(Color32::from_rgb(126, 217, 255))
                                 .strong(),
                         );
                         ui.label("   ");
                         ui.label(
-                            RichText::new(format!("{:.1}°C", zone.temp))
+                            RichText::new(zone.display_temp())
                                 .size(28.0)
                                 .color(Color32::WHITE)
                                 .strong(),
@@ -297,15 +325,22 @@ impl ThermoApp {
                     tag_pill(ui, "POMPE", zone.pump_on, true);
                 });
                 ui.label(format!(
-                    "Temp: {} | Hygro: {} | CO₂: {} ppm",
+                    "Temp: {} | Hygro: {} | CO₂: {}",
                     zone.status_temp(),
                     zone.status_humidity(),
-                    zone.co2_ppm
+                    if zone.sensor_online {
+                        format!("{} ppm", zone.co2_ppm)
+                    } else {
+                        "--- ppm".to_owned()
+                    }
                 ));
                 ui.small(format!(
                     "Jour {}  •  Nuit {}",
                     zone.day_runtime, zone.night_runtime
                 ));
+                if !zone.sensor_online {
+                    ui.colored_label(Color32::from_rgb(255, 178, 178), "Capteur hors-ligne");
+                }
             });
     }
 }
@@ -319,7 +354,7 @@ impl eframe::App for ThermoApp {
 
         egui::TopBottomPanel::top("header").show(ctx, |ui| {
             ui.columns(3, |cols| {
-                cols[0].label(Local::now().format("%a %d %b  %H:%M").to_string());
+                cols[0].label(format_local_fr(Local::now()));
                 cols[1].with_layout(
                     egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                     |ui| {
@@ -393,7 +428,7 @@ impl eframe::App for ThermoApp {
             .resizable(true)
             .show(ctx, |ui| {
                 ui.label(
-                    RichText::new("INFORMATIONS REPTILE")
+                    RichText::new("✓ INFORMATIONS REPTILE")
                         .strong()
                         .color(Color32::LIGHT_GREEN),
                 );
@@ -445,12 +480,21 @@ impl eframe::App for ThermoApp {
 fn tag_pill(ui: &mut egui::Ui, label: &str, on: bool, critical: bool) {
     let (bg, fg) = if on {
         if critical {
-            (Color32::from_rgb(42, 104, 76), Color32::from_rgb(133, 255, 197))
+            (
+                Color32::from_rgb(42, 104, 76),
+                Color32::from_rgb(133, 255, 197),
+            )
         } else {
-            (Color32::from_rgb(43, 95, 104), Color32::from_rgb(141, 233, 255))
+            (
+                Color32::from_rgb(43, 95, 104),
+                Color32::from_rgb(141, 233, 255),
+            )
         }
     } else {
-        (Color32::from_rgb(72, 62, 62), Color32::from_rgb(255, 178, 178))
+        (
+            Color32::from_rgb(72, 62, 62),
+            Color32::from_rgb(255, 178, 178),
+        )
     };
     let text = if on {
         format!("{label} ON")
@@ -501,4 +545,35 @@ fn load_preview_texture(ctx: &egui::Context) -> (Option<egui::TextureHandle>, St
     let color_image = egui::ColorImage::from_rgba_unmultiplied(size, rgba.as_raw());
     let texture = ctx.load_texture("reptile-preview", color_image, egui::TextureOptions::LINEAR);
     (Some(texture), format!("Image chargée: {path_value}"))
+}
+
+fn format_local_fr(now: chrono::DateTime<Local>) -> String {
+    let weekday = match now.weekday().num_days_from_monday() {
+        0 => "lun",
+        1 => "mar",
+        2 => "mer",
+        3 => "jeu",
+        4 => "ven",
+        5 => "sam",
+        _ => "dim",
+    };
+    let month = match now.month() {
+        1 => "jan",
+        2 => "fév",
+        3 => "mar",
+        4 => "avr",
+        5 => "mai",
+        6 => "jun",
+        7 => "jul",
+        8 => "aoû",
+        9 => "sep",
+        10 => "oct",
+        11 => "nov",
+        _ => "déc",
+    };
+    format!(
+        "{weekday} {:02} {month}  {}",
+        now.day(),
+        now.format("%H:%M")
+    )
 }
