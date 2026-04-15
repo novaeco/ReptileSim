@@ -94,6 +94,7 @@ struct SystemState {
     ventilation: bool,
     wifi: bool,
     bluetooth: bool,
+    battery_percent: u8,
 }
 
 struct ThermoApp {
@@ -211,6 +212,7 @@ impl ThermoApp {
                 ventilation: false,
                 wifi: true,
                 bluetooth: true,
+                battery_percent: 86,
             },
             preview_texture,
             preview_status,
@@ -239,6 +241,14 @@ impl ThermoApp {
         }
 
         self.system.ventilation = self.zones.iter().any(|z| z.co2_ppm > 900);
+        if rng.gen_bool(0.03) {
+            self.system.wifi = !self.system.wifi;
+        }
+        self.astro.meteo = if self.system.wifi {
+            "Partiellement nuageux 24°C"
+        } else {
+            "Wi‑Fi indisponible (hors-ligne)"
+        };
     }
 
     fn draw_zone(ui: &mut egui::Ui, zone: &mut Zone) {
@@ -304,6 +314,7 @@ impl eframe::App for ThermoApp {
                 cols[2].with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label("⚙");
                     ui.label(if self.system.wifi { "📶" } else { "📴" });
+                    ui.label(format!("🔋{}%", self.system.battery_percent));
                     ui.label(if self.system.bluetooth { "◉" } else { "○" });
                     ui.label("🔔");
                 });
@@ -336,29 +347,27 @@ impl eframe::App for ThermoApp {
                         );
                         ui.small(&self.preview_status);
                     }
-                    let (rect, _) = ui.allocate_exact_size(
-                        egui::vec2(ui.available_width(), 160.0),
-                        egui::Sense::hover(),
-                    );
-                    ui.painter()
-                        .rect_filled(rect, 6.0, Color32::from_rgb(58, 58, 58));
-                    ui.painter().text(
-                        rect.center(),
-                        egui::Align2::CENTER_CENTER,
-                        "Flux caméra non configuré",
-                        egui::FontId::proportional(16.0),
-                        Color32::LIGHT_GRAY,
-                    );
                 });
 
                 ui.add_space(8.0);
                 ui.group(|ui| {
                     ui.label(RichText::new("ASTRO & CYCLES").strong());
-                    ui.label(format!("Soleil: {}", self.astro.sun));
-                    ui.label(format!("Lune: {}", self.astro.moon));
-                    ui.label(format!("Saison: {}", self.astro.saison));
-                    ui.label(format!("Brumation: {}", self.astro.hibernation));
-                    ui.label(format!("UV index: {}", self.astro.uv_index));
+                    ui.columns(2, |cols| {
+                        cols[0].colored_label(Color32::from_rgb(255, 212, 97), "SOLEIL");
+                        cols[1].colored_label(Color32::from_rgb(126, 217, 255), "LUNE");
+                        cols[0].label(self.astro.sun);
+                        cols[1].label(self.astro.moon);
+                    });
+                    let uv_index = self.astro.uv_index.parse::<f32>().unwrap_or(0.0);
+                    ui.add(
+                        egui::ProgressBar::new((uv_index / 11.0).clamp(0.0, 1.0))
+                            .text(format!("UV INDEX {}", self.astro.uv_index))
+                            .fill(Color32::from_rgb(255, 214, 64)),
+                    );
+                    ui.columns(2, |cols| {
+                        cols[0].label(format!("SAISON\n{}", self.astro.saison));
+                        cols[1].label(format!("BRUMATION\n{}", self.astro.hibernation));
+                    });
                     ui.small(format!("Météo: {}", self.astro.meteo));
                 });
             });
