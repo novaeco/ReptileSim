@@ -28,6 +28,8 @@ struct Zone {
     heat_on: bool,
     pump_on: bool,
     co2_ppm: u16,
+    lux_on: bool,
+    kelvin_6500_on: bool,
     color: Color32,
 }
 
@@ -60,6 +62,25 @@ struct ReptileInfo {
     age: &'static str,
     regime: &'static str,
     cites: &'static str,
+    naissance: &'static str,
+    poids: &'static str,
+    taille: &'static str,
+    mutation: &'static str,
+    eleveur: &'static str,
+    micropuce: &'static str,
+    alimentation: &'static str,
+    acquisition: &'static str,
+    notes: &'static str,
+}
+
+#[derive(Clone)]
+struct AstroCycle {
+    sun: &'static str,
+    moon: &'static str,
+    saison: &'static str,
+    hibernation: &'static str,
+    uv_index: &'static str,
+    meteo: &'static str,
 }
 
 #[derive(Clone)]
@@ -73,6 +94,7 @@ struct SystemState {
 struct ThermoApp {
     zones: Vec<Zone>,
     reptile: ReptileInfo,
+    astro: AstroCycle,
     system: SystemState,
     last_tick: Instant,
 }
@@ -94,6 +116,8 @@ impl ThermoApp {
                     heat_on: false,
                     pump_on: false,
                     co2_ppm: 510,
+                    lux_on: true,
+                    kelvin_6500_on: false,
                     color: Color32::from_rgb(255, 168, 38),
                 },
                 Zone {
@@ -107,6 +131,8 @@ impl ThermoApp {
                     heat_on: false,
                     pump_on: false,
                     co2_ppm: 560,
+                    lux_on: true,
+                    kelvin_6500_on: false,
                     color: Color32::from_rgb(255, 214, 64),
                 },
                 Zone {
@@ -120,6 +146,8 @@ impl ThermoApp {
                     heat_on: false,
                     pump_on: false,
                     co2_ppm: 610,
+                    lux_on: true,
+                    kelvin_6500_on: false,
                     color: Color32::from_rgb(33, 212, 253),
                 },
                 Zone {
@@ -133,6 +161,8 @@ impl ThermoApp {
                     heat_on: false,
                     pump_on: true,
                     co2_ppm: 590,
+                    lux_on: true,
+                    kelvin_6500_on: false,
                     color: Color32::from_rgb(140, 255, 229),
                 },
             ],
@@ -142,6 +172,23 @@ impl ThermoApp {
                 age: "--",
                 regime: "Diurne",
                 cites: "Annexe B (à vérifier)",
+                naissance: "--",
+                poids: "--",
+                taille: "--",
+                mutation: "--",
+                eleveur: "--",
+                micropuce: "--",
+                alimentation: "--",
+                acquisition: "--",
+                notes: "--",
+            },
+            astro: AstroCycle {
+                sun: "06:32 → 19:47",
+                moon: "Croissant (42%)",
+                saison: "Printemps",
+                hibernation: "25 j restant",
+                uv_index: "7",
+                meteo: "Wi‑Fi indisponible (hors-ligne)",
             },
             system: SystemState {
                 rain_bar: false,
@@ -169,6 +216,7 @@ impl ThermoApp {
 
             zone.heat_on = zone.temp < zone.target_temp.0;
             zone.pump_on = zone.name == "bassin" && zone.humidity < 92;
+            zone.kelvin_6500_on = zone.lux_on && !zone.uv_b_on;
             zone.co2_ppm = (zone.co2_ppm as i16 + rng.gen_range(-8..=8)).clamp(350, 1200) as u16;
         }
 
@@ -196,8 +244,10 @@ impl ThermoApp {
                     zone.target_humidity.1
                 ));
                 ui.horizontal_wrapped(|ui| {
+                    tag(ui, "ÉCLAIRAGE", zone.lux_on);
                     tag(ui, "UVA", zone.uv_a_on);
                     tag(ui, "UVB", zone.uv_b_on);
+                    tag(ui, "6500K", zone.kelvin_6500_on);
                     tag(ui, "CHAUF", zone.heat_on);
                     tag(ui, "POMPE", zone.pump_on);
                 });
@@ -245,6 +295,7 @@ impl eframe::App for ThermoApp {
                         egui::Layout::top_down(egui::Align::Center),
                         |ui| {
                             ui.label("[Image caméra / fichier non configuré]");
+                            ui.small("Astuce: intégrer une texture egui via include_bytes!()");
                         },
                     );
                 });
@@ -252,10 +303,12 @@ impl eframe::App for ThermoApp {
                 ui.add_space(8.0);
                 ui.group(|ui| {
                     ui.label(RichText::new("ASTRO & CYCLES").strong());
-                    ui.label("Soleil: 06:32 → 19:47");
-                    ui.label("Lune: Croissant (42%)");
-                    ui.label("Saison: Printemps");
-                    ui.label("UV index: 7");
+                    ui.label(format!("Soleil: {}", self.astro.sun));
+                    ui.label(format!("Lune: {}", self.astro.moon));
+                    ui.label(format!("Saison: {}", self.astro.saison));
+                    ui.label(format!("Brumation: {}", self.astro.hibernation));
+                    ui.label(format!("UV index: {}", self.astro.uv_index));
+                    ui.small(format!("Météo: {}", self.astro.meteo));
                 });
             });
 
@@ -270,8 +323,17 @@ impl eframe::App for ThermoApp {
                 key_val(ui, "Espèce", self.reptile.espece);
                 key_val(ui, "Sexe", self.reptile.sexe);
                 key_val(ui, "Âge", self.reptile.age);
+                key_val(ui, "Naissance", self.reptile.naissance);
                 key_val(ui, "Régime", self.reptile.regime);
+                key_val(ui, "Poids", self.reptile.poids);
+                key_val(ui, "Taille", self.reptile.taille);
+                key_val(ui, "Mutation", self.reptile.mutation);
                 key_val(ui, "CITES", self.reptile.cites);
+                key_val(ui, "Éleveur", self.reptile.eleveur);
+                key_val(ui, "Micropuce", self.reptile.micropuce);
+                key_val(ui, "Alimentation", self.reptile.alimentation);
+                key_val(ui, "Acquisition", self.reptile.acquisition);
+                key_val(ui, "Notes", self.reptile.notes);
 
                 ui.separator();
                 ui.label(RichText::new("SYSTÈME").strong());
