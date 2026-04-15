@@ -1,8 +1,0 @@
-.export/
-.import/
-.build/
-.cache/
-.project_metadata/
-*.translation
-build/
-user://
