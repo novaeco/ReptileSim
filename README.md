@@ -47,8 +47,10 @@ Binaire produit:
 - L'application démarre sans panic.
 - En-tête `ThermoOS` visible.
 - 4 cartes de zones visibles (chaude/intermédiaire/humide/bassin).
+- Chaque carte affiche les tags ÉCLAIRAGE/UVA/UVB/6500K/CHAUF/POMPE.
 - Les valeurs temp/hygro varient automatiquement toutes ~1.2 s.
 - État ventilation passe ON automatiquement si CO₂ simulé dépasse le seuil.
+- Panneau droit affiche les champs reptile étendus (naissance, poids, taille, etc.).
 
 ## Rollback
 
