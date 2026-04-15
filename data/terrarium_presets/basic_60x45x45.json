@@ -1,9 +1,0 @@
-{
-  "name": "Basic 60x45x45",
-  "size_cm": [60, 45, 45],
-  "heater_power_w": 20,
-  "uv_virtual_intensity": 1.0,
-  "plant_density": 0.4,
-  "substrate_moisture": 0.7,
-  "ventilation_factor": 0.5
-}
