@@ -1,0 +1,9 @@
+[package]
+name = "reptile-sim"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = { version = "0.27", default-features = true }
+chrono = { version = "0.4", features = ["clock"] }
+rand = "0.8"
