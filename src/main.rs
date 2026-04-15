@@ -1,6 +1,9 @@
 use chrono::Local;
 use eframe::egui::{self, Color32, RichText, Stroke};
+use image::io::Reader as ImageReader;
 use rand::Rng;
+use std::env;
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 fn main() -> eframe::Result<()> {
@@ -98,12 +101,15 @@ struct ThermoApp {
     reptile: ReptileInfo,
     astro: AstroCycle,
     system: SystemState,
+    preview_texture: Option<egui::TextureHandle>,
+    preview_status: String,
     last_tick: Instant,
 }
 
 impl ThermoApp {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
+        let (preview_texture, preview_status) = load_preview_texture(&cc.egui_ctx);
 
         Self {
             zones: vec![
@@ -206,6 +212,8 @@ impl ThermoApp {
                 wifi: true,
                 bluetooth: true,
             },
+            preview_texture,
+            preview_status,
             last_tick: Instant::now(),
         }
     }
@@ -308,6 +316,26 @@ impl eframe::App for ThermoApp {
                 ui.group(|ui| {
                     ui.label(RichText::new("APERÇU ANIMAL").strong());
                     ui.add_space(8.0);
+                    let image_height = 160.0;
+                    let image_size = egui::vec2(ui.available_width(), image_height);
+
+                    if let Some(texture) = &self.preview_texture {
+                        let image = egui::Image::new(texture).fit_to_exact_size(image_size);
+                        ui.add(image);
+                        ui.small("Source: REPTILE_PREVIEW_PATH");
+                    } else {
+                        let (rect, _) = ui.allocate_exact_size(image_size, egui::Sense::hover());
+                        ui.painter()
+                            .rect_filled(rect, 6.0, Color32::from_rgb(58, 58, 58));
+                        ui.painter().text(
+                            rect.center(),
+                            egui::Align2::CENTER_CENTER,
+                            "Flux caméra non configuré",
+                            egui::FontId::proportional(16.0),
+                            Color32::LIGHT_GRAY,
+                        );
+                        ui.small(&self.preview_status);
+                    }
                     let (rect, _) = ui.allocate_exact_size(
                         egui::vec2(ui.available_width(), 160.0),
                         egui::Sense::hover(),
@@ -408,4 +436,29 @@ fn key_val(ui: &mut egui::Ui, k: &str, v: &str) {
         };
         ui.colored_label(value_color, v);
     });
+}
+
+fn load_preview_texture(ctx: &egui::Context) -> (Option<egui::TextureHandle>, String) {
+    let var_name = "REPTILE_PREVIEW_PATH";
+    let path_value = match env::var(var_name) {
+        Ok(v) if !v.trim().is_empty() => v,
+        _ => return (None, format!("Définir {var_name}=/chemin/vers/image.jpg")),
+    };
+
+    let path = Path::new(&path_value);
+    let reader = match ImageReader::open(path) {
+        Ok(r) => r,
+        Err(err) => return (None, format!("Impossible d'ouvrir {path_value}: {err}")),
+    };
+
+    let decoded = match reader.decode() {
+        Ok(img) => img,
+        Err(err) => return (None, format!("Décodage image impossible: {err}")),
+    };
+
+    let rgba = decoded.to_rgba8();
+    let size = [rgba.width() as usize, rgba.height() as usize];
+    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, rgba.as_raw());
+    let texture = ctx.load_texture("reptile-preview", color_image, egui::TextureOptions::LINEAR);
+    (Some(texture), format!("Image chargée: {path_value}"))
 }

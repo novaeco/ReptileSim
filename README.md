@@ -32,6 +32,12 @@ cargo check
 cargo run
 ```
 
+Avec image locale d'aperçu (JPEG/PNG) :
+
+```bash
+REPTILE_PREVIEW_PATH=/chemin/animal.jpg cargo run
+```
+
 ## Cross-build cible RISC-V
 
 ```bash
@@ -46,6 +52,7 @@ Binaire produit:
 
 - L'application démarre sans panic.
 - En-tête `ThermoOS` visible.
+- Le panneau `APERÇU ANIMAL` affiche l'image si `REPTILE_PREVIEW_PATH` est défini vers un fichier lisible, sinon affiche un message d'aide.
 - 4 cartes de zones visibles (chaude/intermédiaire/humide/bassin).
 - Chaque carte affiche les tags ÉCLAIRAGE/UVA/UVB/6500K/CHAUF/POMPE.
 - Les valeurs temp/hygro varient automatiquement toutes ~1.2 s.
