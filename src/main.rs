@@ -253,15 +253,32 @@ impl ThermoApp {
 
     fn draw_zone(ui: &mut egui::Ui, zone: &mut Zone) {
         egui::Frame::none()
-            .stroke(Stroke::new(2.0, zone.color))
-            .inner_margin(egui::Margin::symmetric(10.0, 8.0))
+            .stroke(Stroke::new(1.0, Color32::from_gray(55)))
+            .inner_margin(egui::Margin::symmetric(12.0, 10.0))
             .show(ui, |ui| {
+                let card_rect = ui.max_rect();
+                let accent = egui::Rect::from_min_max(
+                    card_rect.left_top(),
+                    egui::pos2(card_rect.left() + 4.0, card_rect.bottom()),
+                );
+                ui.painter().rect_filled(accent, 2.0, zone.color);
+
                 ui.horizontal(|ui| {
                     ui.colored_label(zone.color, RichText::new(zone.name).strong());
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(format!("{}%", zone.humidity));
-                        ui.label("  ");
-                        ui.label(format!("{:.1}°C", zone.temp));
+                        ui.label(
+                            RichText::new(format!("{}%", zone.humidity))
+                                .size(28.0)
+                                .color(Color32::from_rgb(126, 217, 255))
+                                .strong(),
+                        );
+                        ui.label("   ");
+                        ui.label(
+                            RichText::new(format!("{:.1}°C", zone.temp))
+                                .size(28.0)
+                                .color(Color32::WHITE)
+                                .strong(),
+                        );
                     });
                 });
                 ui.small(format!(
@@ -272,12 +289,12 @@ impl ThermoApp {
                     zone.target_humidity.1
                 ));
                 ui.horizontal_wrapped(|ui| {
-                    tag(ui, "ÉCLAIRAGE", zone.lux_on);
-                    tag(ui, "UVA", zone.uv_a_on);
-                    tag(ui, "UVB", zone.uv_b_on);
-                    tag(ui, "6500K", zone.kelvin_6500_on);
-                    tag(ui, "CHAUF", zone.heat_on);
-                    tag(ui, "POMPE", zone.pump_on);
+                    tag_pill(ui, "ÉCLAIRAGE", zone.lux_on, false);
+                    tag_pill(ui, "UVA", zone.uv_a_on, true);
+                    tag_pill(ui, "UVB", zone.uv_b_on, true);
+                    tag_pill(ui, "6500K", zone.kelvin_6500_on, false);
+                    tag_pill(ui, "CHAUF", zone.heat_on, true);
+                    tag_pill(ui, "POMPE", zone.pump_on, true);
                 });
                 ui.label(format!(
                     "Temp: {} | Hygro: {} | CO₂: {} ppm",
@@ -425,14 +442,28 @@ impl eframe::App for ThermoApp {
     }
 }
 
-fn tag(ui: &mut egui::Ui, label: &str, on: bool) {
-    let color = if on {
-        Color32::from_rgb(99, 220, 161)
+fn tag_pill(ui: &mut egui::Ui, label: &str, on: bool, critical: bool) {
+    let (bg, fg) = if on {
+        if critical {
+            (Color32::from_rgb(42, 104, 76), Color32::from_rgb(133, 255, 197))
+        } else {
+            (Color32::from_rgb(43, 95, 104), Color32::from_rgb(141, 233, 255))
+        }
     } else {
-        Color32::from_rgb(255, 115, 115)
+        (Color32::from_rgb(72, 62, 62), Color32::from_rgb(255, 178, 178))
     };
-    let state = if on { "ON" } else { "OFF" };
-    ui.colored_label(color, format!("{label}:{state}"));
+    let text = if on {
+        format!("{label} ON")
+    } else {
+        format!("{label} OFF")
+    };
+    egui::Frame::none()
+        .fill(bg)
+        .rounding(6.0)
+        .inner_margin(egui::Margin::symmetric(8.0, 2.0))
+        .show(ui, |ui| {
+            ui.label(RichText::new(text).color(fg).strong());
+        });
 }
 
 fn key_val(ui: &mut egui::Ui, k: &str, v: &str) {

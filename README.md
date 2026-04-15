@@ -54,7 +54,7 @@ Binaire produit:
 - En-tête `ThermoOS` visible.
 - Le panneau `APERÇU ANIMAL` affiche l'image si `REPTILE_PREVIEW_PATH` est défini vers un fichier lisible, sinon affiche un message d'aide.
 - 4 cartes de zones visibles (chaude/intermédiaire/humide/bassin).
-- Chaque carte affiche les tags ÉCLAIRAGE/UVA/UVB/6500K/CHAUF/POMPE.
+- Chaque carte affiche une barre d'accent colorée à gauche, les mesures en grand, et les tags ÉCLAIRAGE/UVA/UVB/6500K/CHAUF/POMPE en pastilles ON/OFF.
 - Les valeurs temp/hygro varient automatiquement toutes ~1.2 s.
 - État ventilation passe ON automatiquement si CO₂ simulé dépasse le seuil.
 - Panneau droit affiche les champs reptile étendus (naissance, poids, taille, etc.).
